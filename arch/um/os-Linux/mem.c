@@ -142,7 +142,7 @@ static int __init create_tmp_file(unsigned long long len)
 	if (fd < 0)
 		exit(1);
 
-	err = fchmod(fd, 0777);
+	err = fchmod(fd, 0700);
 	if (err < 0) {
 		perror("fchmod");
 		exit(1);
