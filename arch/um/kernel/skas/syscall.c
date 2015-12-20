@@ -7,6 +7,7 @@
 #include <linux/ptrace.h>
 #include <kern_util.h>
 #include <sysdep/ptrace.h>
+#include <sysdep/ptrace_user.h>
 #include <sysdep/syscalls.h>
 #include <os.h>
 
@@ -16,12 +17,16 @@ void handle_syscall(struct uml_pt_regs *r)
 	long result;
 	int syscall;
 
+	/* Save the syscall register. */
+	UPT_SYSCALL_NR(r) = PT_SYSCALL_NR(r->gp);
+
 	if (syscall_trace_enter(regs)) {
 		result = -ENOSYS;
 		goto out;
 	}
 
-	syscall = get_syscall(r);
+	/* Get the syscall after being potentially updated with ptrace. */
+	syscall = UPT_SYSCALL_NR(r);
 
 	if ((syscall > __NR_syscall_max) || syscall < 0)
 		result = -ENOSYS;
