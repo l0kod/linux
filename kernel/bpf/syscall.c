@@ -17,6 +17,7 @@
 #include <linux/license.h>
 #include <linux/filter.h>
 #include <linux/version.h>
+#include <linux/fs.h>
 
 DEFINE_PER_CPU(int, bpf_prog_active);
 
