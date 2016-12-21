@@ -30,6 +30,7 @@
 #include <linux/string.h>
 #include <linux/mm.h>
 #include <linux/fs.h>
+#include <linux/time.h>
 
 struct linux_binprm;
 struct cred;
@@ -288,6 +289,7 @@ int security_inode_listsecurity(struct inode *inode, char *buffer, size_t buffer
 void security_inode_getsecid(struct inode *inode, u32 *secid);
 int security_inode_copy_up(struct dentry *src, struct cred **new);
 int security_inode_copy_up_xattr(const char *name);
+int security_inode_touch_atime(const struct path *path, const struct timespec *ts);
 int security_file_permission(struct file *file, int mask);
 int security_file_alloc(struct file *file);
 void security_file_free(struct file *file);
@@ -779,6 +781,12 @@ static inline int security_inode_copy_up(struct dentry *src, struct cred **new)
 static inline int security_inode_copy_up_xattr(const char *name)
 {
 	return -EOPNOTSUPP;
+}
+
+static inline int security_inode_touch_atime(const struct path *path, const
+					     struct timespec *ts)
+{
+	return 0;
 }
 
 static inline int security_file_permission(struct file *file, int mask)

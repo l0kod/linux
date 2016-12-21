@@ -428,6 +428,11 @@
  *	security module does not know about attribute or a negative error code
  *	to abort the copy up. Note that the caller is responsible for reading
  *	and writing the xattrs as this hook is merely a filter.
+ * @inode_touch_atime:
+ *	Check permission before updating access time.
+ *	@path contains the path structure for the file.
+ *	@ts contains the current time.
+ *	Return 0 if permission is granted.
  *
  * Security hooks for file operations
  *
@@ -1458,6 +1463,8 @@ union security_list_options {
 	void (*inode_getsecid)(struct inode *inode, u32 *secid);
 	int (*inode_copy_up)(struct dentry *src, struct cred **new);
 	int (*inode_copy_up_xattr)(const char *name);
+	int (*inode_touch_atime)(const struct path *path,
+					const struct timespec *ts);
 
 	int (*file_permission)(struct file *file, int mask);
 	int (*file_alloc_security)(struct file *file);
@@ -1731,6 +1738,7 @@ struct security_hook_heads {
 	struct list_head inode_getsecid;
 	struct list_head inode_copy_up;
 	struct list_head inode_copy_up_xattr;
+	struct list_head inode_touch_atime;
 	struct list_head file_permission;
 	struct list_head file_alloc_security;
 	struct list_head file_free_security;

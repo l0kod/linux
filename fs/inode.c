@@ -1706,6 +1706,10 @@ void touch_atime(const struct path *path)
 	if (!__atime_needs_update(path, inode, false))
 		return;
 
+	now = current_time(inode);
+	if (security_inode_touch_atime(path, &now))
+		return;
+
 	if (!sb_start_write_trylock(inode->i_sb))
 		return;
 
@@ -1720,7 +1724,6 @@ void touch_atime(const struct path *path)
 	 * We may also fail on filesystems that have the ability to make parts
 	 * of the fs read only, e.g. subvolumes in Btrfs.
 	 */
-	now = current_time(inode);
 	update_time(inode, &now, S_ATIME);
 	__mnt_drop_write(mnt);
 skip_update:
