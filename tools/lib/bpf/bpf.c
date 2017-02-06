@@ -121,11 +121,10 @@ int bpf_map_lookup_elem(int fd, const void *key, void *value)
 	return sys_bpf(BPF_MAP_LOOKUP_ELEM, &attr, sizeof(attr));
 }
 
-int bpf_map_delete_elem(int fd, void *key)
+int bpf_map_delete_elem(int fd, const void *key)
 {
-	union bpf_attr attr;
+	union bpf_attr attr = {};
 
-	bzero(&attr, sizeof(attr));
 	attr.map_fd = fd;
 	attr.key = ptr_to_u64(key);
 
