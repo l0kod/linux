@@ -131,11 +131,10 @@ int bpf_map_delete_elem(int fd, const void *key)
 	return sys_bpf(BPF_MAP_DELETE_ELEM, &attr, sizeof(attr));
 }
 
-int bpf_map_get_next_key(int fd, void *key, void *next_key)
+int bpf_map_get_next_key(int fd, const void *key, void *next_key)
 {
-	union bpf_attr attr;
+	union bpf_attr attr = {};
 
-	bzero(&attr, sizeof(attr));
 	attr.map_fd = fd;
 	attr.key = ptr_to_u64(key);
 	attr.next_key = ptr_to_u64(next_key);
