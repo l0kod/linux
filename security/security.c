@@ -25,6 +25,7 @@
 #include <linux/mount.h>
 #include <linux/personality.h>
 #include <linux/backing-dev.h>
+#include <linux/string.h>
 #include <net/flow.h>
 
 #define MAX_LSM_EVM_XATTR	2
@@ -86,6 +87,32 @@ static int __init choose_lsm(char *str)
 }
 __setup("security=", choose_lsm);
 
+static bool match_last_lsm(const char *list, const char *last)
+{
+	size_t list_len, last_len, i;
+
+	if (!list || !last)
+		return false;
+	list_len = strlen(list);
+	last_len = strlen(last);
+	if (!last_len || !list_len)
+		return false;
+	if (last_len > list_len)
+		return false;
+
+	for (i = 0; i < last_len; i++) {
+		if (list[list_len - 1 - i] != last[last_len - 1 - i])
+			return false;
+	}
+	/* Check if last_len == list_len */
+	if (i == list_len)
+		return true;
+	/* Check if it is a full name */
+	if (list[list_len - 1 - i] == ',')
+		return true;
+	return false;
+}
+
 static int lsm_append(char *new, char **result)
 {
 	char *cp;
@@ -93,6 +120,9 @@ static int lsm_append(char *new, char **result)
 	if (*result == NULL) {
 		*result = kstrdup(new, GFP_KERNEL);
 	} else {
+		/* Check if it is the last registered name */
+		if (match_last_lsm(*result, new))
+			return 0;
 		cp = kasprintf(GFP_KERNEL, "%s,%s", *result, new);
 		if (cp == NULL)
 			return -ENOMEM;
