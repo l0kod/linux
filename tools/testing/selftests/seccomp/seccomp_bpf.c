@@ -37,7 +37,7 @@
 #include <unistd.h>
 #include <sys/syscall.h>
 
-#include "test_harness.h"
+#include "../test_harness.h"
 
 #ifndef PR_SET_PTRACER
 # define PR_SET_PTRACER 0x59616d61
