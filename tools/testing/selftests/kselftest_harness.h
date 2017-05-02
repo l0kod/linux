@@ -4,38 +4,6 @@
  *
  * kselftest_harness.h: simple C unit test helper.
  *
- * Usage:
- *   #include "../kselftest_harness.h"
- *   TEST(standalone_test) {
- *     do_some_stuff;
- *     EXPECT_GT(10, stuff) {
- *        stuff_state_t state;
- *        enumerate_stuff_state(&state);
- *        TH_LOG("expectation failed with state: %s", state.msg);
- *     }
- *     more_stuff;
- *     ASSERT_NE(some_stuff, NULL) TH_LOG("how did it happen?!");
- *     last_stuff;
- *     EXPECT_EQ(0, last_stuff);
- *   }
- *
- *   FIXTURE(my_fixture) {
- *     mytype_t *data;
- *     int awesomeness_level;
- *   };
- *   FIXTURE_SETUP(my_fixture) {
- *     self->data = mytype_new();
- *     ASSERT_NE(NULL, self->data);
- *   }
- *   FIXTURE_TEARDOWN(my_fixture) {
- *     mytype_free(self->data);
- *   }
- *   TEST_F(my_fixture, data_is_good) {
- *     EXPECT_EQ(1, is_my_data_good(self->data));
- *   }
- *
- *   TEST_HARNESS_MAIN
- *
  * API inspired by code.google.com/p/googletest
  */
 
@@ -58,7 +26,13 @@
  * Exported APIs
  */
 
-/* TEST(name) { implementation }
+/**
+ * DOC: helpers
+ *
+ * .. code-block:: c
+ *
+ *     TEST(name) { implementation }
+ *
  * Defines a test by name.
  * Names must be unique and tests must not be run in parallel.  The
  * implementation containing block is a function and scoping should be treated
@@ -68,7 +42,13 @@
  */
 #define TEST TEST_API(TEST)
 
-/* TEST_SIGNAL(name, signal) { implementation }
+/**
+ * DOC: helpers
+ *
+ * .. code-block:: c
+ *
+ *     TEST_SIGNAL(name, signal) { implementation }
+ *
  * Defines a test by name and the expected term signal.
  * Names must be unique and tests must not be run in parallel.  The
  * implementation containing block is a function and scoping should be treated
@@ -78,25 +58,43 @@
  */
 #define TEST_SIGNAL TEST_API(TEST_SIGNAL)
 
-/* FIXTURE(datatype name) {
- *   type property1;
- *   ...
- * };
- * Defines the data provided to TEST_F()-defined tests as |self|.  It should be
+/**
+ * DOC: helpers
+ *
+ * .. code-block:: c
+ *
+ *     FIXTURE(datatype name) {
+ *       type property1;
+ *       ...
+ *     };
+ *
+ * Defines the data provided to TEST_F()-defined tests as \|self\|.  It should be
  * populated and cleaned up using FIXTURE_SETUP and FIXTURE_TEARDOWN.
  */
 #define FIXTURE TEST_API(FIXTURE)
 
-/* FIXTURE_DATA(datatype name)
+/**
+ * DOC: helpers
+ *
+ * .. code-block:: c
+ *
+ *     FIXTURE_DATA(datatype name)
+ *
  * This call may be used when the type of the fixture data
  * is needed.  In general, this should not be needed unless
- * the |self| is being passed to a helper directly.
+ * the \|self\| is being passed to a helper directly.
  */
 #define FIXTURE_DATA TEST_API(FIXTURE_DATA)
 
-/* FIXTURE_SETUP(fixture name) { implementation }
+/**
+ * DOC: helpers
+ *
+ * .. code-block:: c
+ *
+ *     FIXTURE_SETUP(fixture name) { implementation }
+ *
  * Populates the required "setup" function for a fixture.  An instance of the
- * datatype defined with _FIXTURE_DATA will be exposed as |self| for the
+ * datatype defined with _FIXTURE_DATA will be exposed as \|self\| for the
  * implementation.
  *
  * ASSERT_* are valid for use in this context and will prempt the execution
@@ -106,84 +104,199 @@
  */
 #define FIXTURE_SETUP TEST_API(FIXTURE_SETUP)
 
-/* FIXTURE_TEARDOWN(fixture name) { implementation }
+/**
+ * DOC: helpers
+ *
+ * .. code-block:: c
+ *
+ *     FIXTURE_TEARDOWN(fixture name) { implementation }
+ *
  * Populates the required "teardown" function for a fixture.  An instance of the
- * datatype defined with _FIXTURE_DATA will be exposed as |self| for the
+ * datatype defined with _FIXTURE_DATA will be exposed as \|self\| for the
  * implementation to clean up.
  *
  * A bare "return;" statement may be used to return early.
  */
 #define FIXTURE_TEARDOWN TEST_API(FIXTURE_TEARDOWN)
 
-/* TEST_F(fixture, name) { implementation }
+/**
+ * DOC: helpers
+ *
+ * .. code-block:: c
+ *
+ *     TEST_F(fixture, name) { implementation }
+ *
  * Defines a test that depends on a fixture (e.g., is part of a test case).
- * Very similar to TEST() except that |self| is the setup instance of fixture's
+ * Very similar to TEST() except that \|self\| is the setup instance of fixture's
  * datatype exposed for use by the implementation.
  */
 #define TEST_F TEST_API(TEST_F)
 
 #define TEST_F_SIGNAL TEST_API(TEST_F_SIGNAL)
 
-/* Use once to append a main() to the test file. E.g.,
- *   TEST_HARNESS_MAIN
+/**
+ * DOC: helpers
+ *
+ * .. code-block:: c
+ *
+ *     TEST_HARNESS_MAIN
+ *
+ * Use once to append a main() to the test file.
  */
 #define TEST_HARNESS_MAIN TEST_API(TEST_HARNESS_MAIN)
 
-/*
+/**
+ * DOC: operators
+ *
  * Operators for use in TEST and TEST_F.
  * ASSERT_* calls will stop test execution immediately.
  * EXPECT_* calls will emit a failure warning, note it, and continue.
  */
 
-/* ASSERT_EQ(expected, measured): expected == measured */
+/**
+ * DOC: operators
+ *
+ * * ASSERT_EQ(expected, measured): expected == measured
+ */
 #define ASSERT_EQ TEST_API(ASSERT_EQ)
-/* ASSERT_NE(expected, measured): expected != measured */
+/**
+ * DOC: operators
+ *
+ * * ASSERT_NE(expected, measured): expected != measured
+ */
 #define ASSERT_NE TEST_API(ASSERT_NE)
-/* ASSERT_LT(expected, measured): expected < measured */
+/**
+ * DOC: operators
+ *
+ * * ASSERT_LT(expected, measured): expected < measured
+ */
 #define ASSERT_LT TEST_API(ASSERT_LT)
-/* ASSERT_LE(expected, measured): expected <= measured */
+/**
+ * DOC: operators
+ *
+ * * ASSERT_LE(expected, measured): expected <= measured
+ */
 #define ASSERT_LE TEST_API(ASSERT_LE)
-/* ASSERT_GT(expected, measured): expected > measured */
+/**
+ * DOC: operators
+ *
+ * * ASSERT_GT(expected, measured): expected > measured
+ */
 #define ASSERT_GT TEST_API(ASSERT_GT)
-/* ASSERT_GE(expected, measured): expected >= measured */
+/**
+ * DOC: operators
+ *
+ * * ASSERT_GE(expected, measured): expected >= measured
+ */
 #define ASSERT_GE TEST_API(ASSERT_GE)
-/* ASSERT_NULL(measured): NULL == measured */
+/**
+ * DOC: operators
+ *
+ * * ASSERT_NULL(measured): NULL == measured
+ */
 #define ASSERT_NULL TEST_API(ASSERT_NULL)
-/* ASSERT_TRUE(measured): measured != 0 */
+/**
+ * DOC: operators
+ *
+ * * ASSERT_TRUE(measured): measured != 0
+ */
 #define ASSERT_TRUE TEST_API(ASSERT_TRUE)
-/* ASSERT_FALSE(measured): measured == 0 */
+/**
+ * DOC: operators
+ *
+ * * ASSERT_FALSE(measured): measured == 0
+ */
 #define ASSERT_FALSE TEST_API(ASSERT_FALSE)
-/* ASSERT_STREQ(expected, measured): !strcmp(expected, measured) */
+/**
+ * DOC: operators
+ *
+ * * ASSERT_STREQ(expected, measured): !strcmp(expected, measured)
+ */
 #define ASSERT_STREQ TEST_API(ASSERT_STREQ)
-/* ASSERT_STRNE(expected, measured): strcmp(expected, measured) */
+/**
+ * DOC: operators
+ *
+ * * ASSERT_STRNE(expected, measured): strcmp(expected, measured)
+ */
 #define ASSERT_STRNE TEST_API(ASSERT_STRNE)
-/* EXPECT_EQ(expected, measured): expected == measured */
+/**
+ * DOC: operators
+ *
+ * * EXPECT_EQ(expected, measured): expected == measured
+ */
 #define EXPECT_EQ TEST_API(EXPECT_EQ)
-/* EXPECT_NE(expected, measured): expected != measured */
+/**
+ * DOC: operators
+ *
+ * * EXPECT_NE(expected, measured): expected != measured
+ */
 #define EXPECT_NE TEST_API(EXPECT_NE)
-/* EXPECT_LT(expected, measured): expected < measured */
+/**
+ * DOC: operators
+ *
+ * * EXPECT_LT(expected, measured): expected < measured
+ */
 #define EXPECT_LT TEST_API(EXPECT_LT)
-/* EXPECT_LE(expected, measured): expected <= measured */
+/**
+ * DOC: operators
+ *
+ * * EXPECT_LE(expected, measured): expected <= measured
+ */
 #define EXPECT_LE TEST_API(EXPECT_LE)
-/* EXPECT_GT(expected, measured): expected > measured */
+/**
+ * DOC: operators
+ *
+ * * EXPECT_GT(expected, measured): expected > measured
+ */
 #define EXPECT_GT TEST_API(EXPECT_GT)
-/* EXPECT_GE(expected, measured): expected >= measured */
+/**
+ * DOC: operators
+ *
+ * * EXPECT_GE(expected, measured): expected >= measured
+ */
 #define EXPECT_GE TEST_API(EXPECT_GE)
-/* EXPECT_NULL(measured): NULL == measured */
+/**
+ * DOC: operators
+ *
+ * * EXPECT_NULL(measured): NULL == measured
+ */
 #define EXPECT_NULL TEST_API(EXPECT_NULL)
-/* EXPECT_TRUE(measured): 0 != measured */
+/**
+ * DOC: operators
+ *
+ * * EXPECT_TRUE(measured): 0 != measured
+ */
 #define EXPECT_TRUE TEST_API(EXPECT_TRUE)
-/* EXPECT_FALSE(measured): 0 == measured */
+/**
+ * DOC: operators
+ *
+ * * EXPECT_FALSE(measured): 0 == measured
+ */
 #define EXPECT_FALSE TEST_API(EXPECT_FALSE)
-/* EXPECT_STREQ(expected, measured): !strcmp(expected, measured) */
+/**
+ * DOC: operators
+ *
+ * * EXPECT_STREQ(expected, measured): !strcmp(expected, measured)
+ */
 #define EXPECT_STREQ TEST_API(EXPECT_STREQ)
-/* EXPECT_STRNE(expected, measured): strcmp(expected, measured) */
+/**
+ * DOC: operators
+ *
+ * * EXPECT_STRNE(expected, measured): strcmp(expected, measured)
+ */
 #define EXPECT_STRNE TEST_API(EXPECT_STRNE)
 
-/* TH_LOG(format, ...)
+/**
+ * DOC: helpers
+ *
+ * .. code-block:: c
+ *
+ *     TH_LOG(format, ...)
+ *
  * Optional debug logging function available for use in tests.
  * Logging may be enabled or disabled by defining TH_LOG_ENABLED.
  * E.g., #define TH_LOG_ENABLED 1
+ *
  * If no definition is provided, logging is enabled by default.
  */
 #define TH_LOG  TEST_API(TH_LOG)
