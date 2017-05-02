@@ -120,3 +120,61 @@ Contributing new tests (details)
    executable which is not tested by default.
    TEST_FILES, TEST_GEN_FILES mean it is the file which is used by
    test.
+
+Test Harness
+============
+
+The *kselftest_harness.h* file contains useful helpers to build tests. The
+tests from *tools/testing/selftests/seccomp/seccomp_bpf.c* can be used as
+examples.
+
+Example
+-------
+
+.. code-block:: c
+
+    #include "../kselftest_harness.h"
+
+    TEST(standalone_test) {
+      do_some_stuff;
+      EXPECT_GT(10, stuff) {
+         stuff_state_t state;
+         enumerate_stuff_state(&state);
+         TH_LOG("expectation failed with state: %s", state.msg);
+      }
+      more_stuff;
+      ASSERT_NE(some_stuff, NULL) TH_LOG("how did it happen?!");
+      last_stuff;
+      EXPECT_EQ(0, last_stuff);
+    }
+
+    FIXTURE(my_fixture) {
+      mytype_t *data;
+      int awesomeness_level;
+    };
+    FIXTURE_SETUP(my_fixture) {
+      self->data = mytype_new();
+      ASSERT_NE(NULL, self->data);
+    }
+    FIXTURE_TEARDOWN(my_fixture) {
+      mytype_free(self->data);
+    }
+    TEST_F(my_fixture, data_is_good) {
+      EXPECT_EQ(1, is_my_data_good(self->data));
+    }
+
+    TEST_HARNESS_MAIN
+
+
+Helpers
+-------
+
+.. kernel-doc:: tools/testing/selftests/kselftest_harness.h
+    :doc: helpers
+
+
+Operators
+---------
+
+.. kernel-doc:: tools/testing/selftests/kselftest_harness.h
+    :doc: operators
