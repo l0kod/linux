@@ -97,6 +97,9 @@
 #define O_NDELAY	O_NONBLOCK
 #endif
 
+/* command execution from file is intended, check exec permissions */
+#define O_MAYEXEC	040000000
+
 #define F_DUPFD		0	/* dup */
 #define F_GETFD		1	/* get close_on_exec */
 #define F_SETFD		2	/* set/clear close_on_exec */
