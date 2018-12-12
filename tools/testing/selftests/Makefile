@@ -46,6 +46,7 @@ endif
 TARGETS += user
 TARGETS += vm
 TARGETS += x86
+TARGETS += yama
 TARGETS += zram
 #Please keep the TARGETS list alphabetically sorted
 # Run "make quicktest=1 run_tests" or
