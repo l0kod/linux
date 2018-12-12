@@ -1,10 +1,12 @@
 /*
  * Yama Linux Security Module
  *
- * Author: Kees Cook <keescook@chromium.org>
+ * Authors: Kees Cook <keescook@chromium.org>
+ *          Mickaël Salaün <mickael.salaun@ssi.gouv.fr>
  *
  * Copyright (C) 2010 Canonical, Ltd.
  * Copyright (C) 2011 The Chromium OS Authors.
+ * Copyright (C) 2018 ANSSI
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2, as
@@ -28,7 +30,14 @@
 #define YAMA_SCOPE_CAPABILITY	2
 #define YAMA_SCOPE_NO_ATTACH	3
 
+#define YAMA_OMAYEXEC_ENFORCE_NONE	0
+#define YAMA_OMAYEXEC_ENFORCE_MOUNT	(1 << 0)
+#define YAMA_OMAYEXEC_ENFORCE_FILE	(1 << 1)
+#define _YAMA_OMAYEXEC_LAST		YAMA_OMAYEXEC_ENFORCE_FILE
+#define _YAMA_OMAYEXEC_MASK		((_YAMA_OMAYEXEC_LAST << 1) - 1)
+
 static int ptrace_scope = YAMA_SCOPE_RELATIONAL;
+static int open_mayexec_enforce = YAMA_OMAYEXEC_ENFORCE_NONE;
 
 /* describe a ptrace relationship for potential exception */
 struct ptrace_relation {
@@ -423,7 +432,40 @@ int yama_ptrace_traceme(struct task_struct *parent)
 	return rc;
 }
 
+/**
+ * yama_inode_permission - check O_MAYEXEC permission before accessing an inode
+ * @inode: inode structure to check
+ * @mask: permission mask
+ *
+ * Return 0 if access is permitted, -EACCES otherwise.
+ */
+int yama_inode_permission(struct inode *inode, int mask)
+{
+	if (!(mask & MAY_OPENEXEC))
+		return 0;
+	/*
+	 * Match regular files and directories to make it easier to
+	 * modify script interpreters.
+	 */
+	if (!S_ISREG(inode->i_mode) && !S_ISDIR(inode->i_mode))
+		return 0;
+
+	if ((open_mayexec_enforce & YAMA_OMAYEXEC_ENFORCE_MOUNT) &&
+			!(mask & MAY_EXECMOUNT))
+		return -EACCES;
+
+	/*
+	 * May prefer acl_permission_check() instead of generic_permission(),
+	 * to not be bypassable with CAP_DAC_READ_SEARCH.
+	 */
+	if (open_mayexec_enforce & YAMA_OMAYEXEC_ENFORCE_FILE)
+		return generic_permission(inode, MAY_EXEC);
+
+	return 0;
+}
+
 static struct security_hook_list yama_hooks[] __lsm_ro_after_init = {
+	LSM_HOOK_INIT(inode_permission, yama_inode_permission),
 	LSM_HOOK_INIT(ptrace_access_check, yama_ptrace_access_check),
 	LSM_HOOK_INIT(ptrace_traceme, yama_ptrace_traceme),
 	LSM_HOOK_INIT(task_prctl, yama_task_prctl),
@@ -447,6 +489,37 @@ static int yama_dointvec_minmax(struct ctl_table *table, int write,
 	return proc_dointvec_minmax(&table_copy, write, buffer, lenp, ppos);
 }
 
+static int yama_dointvec_bitmask_macadmin(struct ctl_table *table, int write,
+					  void __user *buffer, size_t *lenp,
+					  loff_t *ppos)
+{
+	int error;
+
+	if (write) {
+		struct ctl_table table_copy;
+		int tmp_mayexec_enforce;
+
+		if (!capable(CAP_MAC_ADMIN))
+			return -EPERM;
+		tmp_mayexec_enforce = *((int *)table->data);
+		table_copy = *table;
+		/* do not erase open_mayexec_enforce */
+		table_copy.data = &tmp_mayexec_enforce;
+		error = proc_dointvec(&table_copy, write, buffer, lenp, ppos);
+		if (error)
+			return error;
+		if ((tmp_mayexec_enforce | _YAMA_OMAYEXEC_MASK) !=
+				_YAMA_OMAYEXEC_MASK)
+			return -EINVAL;
+		*((int *)table->data) = tmp_mayexec_enforce;
+	} else {
+		error = proc_dointvec(table, write, buffer, lenp, ppos);
+		if (error)
+			return error;
+	}
+	return 0;
+}
+
 static int zero;
 static int max_scope = YAMA_SCOPE_NO_ATTACH;
 
@@ -465,6 +538,13 @@ static struct ctl_table yama_sysctl_table[] = {
 		.proc_handler   = yama_dointvec_minmax,
 		.extra1         = &zero,
 		.extra2         = &max_scope,
+	},
+	{
+		.procname       = "open_mayexec_enforce",
+		.data           = &open_mayexec_enforce,
+		.maxlen         = sizeof(int),
+		.mode           = 0644,
+		.proc_handler   = yama_dointvec_bitmask_macadmin,
 	},
 	{ }
 };
