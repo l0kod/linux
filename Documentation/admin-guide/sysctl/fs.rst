@@ -37,6 +37,7 @@ Currently, these files are in /proc/sys/fs:
 - inode-nr
 - inode-state
 - nr_open
+- open_mayexec_enforce
 - overflowuid
 - overflowgid
 - pipe-user-pages-hard
@@ -163,6 +164,48 @@ Nr_free_inodes represents the number of free inodes (?) and
 preshrink is nonzero when the nr_inodes > inode-max and the
 system needs to prune the inode list instead of allocating
 more.
+
+
+open_mayexec_enforce
+--------------------
+
+The ``O_MAYEXEC`` flag can be passed to :manpage:`open(2)` to only open regular
+files that are expected to be executable.  If the file is not identified as
+executable, then the syscall returns -EACCES.  This may allow a script
+interpreter to check executable permission before reading commands from a file.
+One interesting use case is to enforce a "write xor execute" policy through
+interpreters.
+
+Thanks to this flag, it is possible to enforce the ``noexec`` mount option
+(i.e.  the underlying mount point of the file is mounted with MNT_NOEXEC or its
+underlying superblock is SB_I_NOEXEC) not only on ELF binaries but also on
+scripts.  This may be possible thanks to script interpreters using the
+``O_MAYEXEC`` flag.  The executable permission is then checked before reading
+commands from a file, and thus can enforce the ``noexec`` at the interpreter
+level by propagating this security policy to the scripts.  To be fully
+effective, these interpreters also need to handle the other ways to execute
+code (for which the kernel can't help): command line parameters (e.g., option
+``-e`` for Perl), module loading (e.g., option ``-m`` for Python), stdin, file
+sourcing, environment variables, configuration files...  According to the
+threat model, it may be acceptable to allow some script interpreters (e.g.
+Bash) to interpret commands from stdin, may it be a TTY or a pipe, because it
+may not be enough to (directly) perform syscalls.
+
+There is two complementary security policies: enforce the ``noexec`` mount
+option, or enforce executable file permission.  These policies are handled by
+the ``fs.open_mayexec_enforce`` sysctl (writable only with ``CAP_MAC_ADMIN``)
+as a bitmask:
+
+1 - mount restriction:
+    check that the mount options for the underlying VFS mount do not prevent
+    execution.
+
+2 - file permission restriction:
+    check that the to-be-opened file is marked as executable for the current
+    process (e.g., POSIX permissions).
+
+Code samples can be found in tools/testing/selftests/exec/omayexec.c and
+https://github.com/clipos-archive/clipos4_portage-overlay/search?q=O_MAYEXEC .
 
 
 overflowgid & overflowuid
