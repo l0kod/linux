@@ -989,6 +989,12 @@ static inline int build_open_flags(int flags, umode_t mode, struct open_flags *o
 		acc_mode = 0;
 	}
 
+	/* Check execution permissions on open. */
+	if (flags & O_MAYEXEC) {
+		acc_mode |= MAY_OPENEXEC;
+		flags |= __FMODE_EXEC;
+	}
+
 	op->open_flag = flags;
 
 	/* O_TRUNC implies we need access checks for write permissions */
