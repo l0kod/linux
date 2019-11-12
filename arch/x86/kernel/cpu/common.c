@@ -22,6 +22,7 @@
 #include <linux/io.h>
 #include <linux/syscore_ops.h>
 #include <linux/pgtable.h>
+#include <linux/kvm_para.h>
 
 #include <asm/cmdline.h>
 #include <asm/stackprotector.h>
@@ -451,6 +452,11 @@ static void __init setup_cr_pinning(void)
 {
 	cr4_pinned_bits = this_cpu_read(cpu_tlbstate.cr4) & cr4_pinned_mask;
 	static_key_enable(&cr_pinning.key);
+
+	kvm_setup_paravirt_cr_pinning(X86_CR0_WP,
+				      X86_CR0_WP,
+				      cr4_pinned_bits,
+				      cr4_pinned_mask);
 }
 
 static __init int x86_nofsgsbase_setup(char *arg)
@@ -1719,6 +1725,11 @@ void identify_secondary_cpu(struct cpuinfo_x86 *c)
 	validate_apic_and_package_id(c);
 	x86_spec_ctrl_setup_ap();
 	update_srbds_msr();
+
+	kvm_setup_paravirt_cr_pinning(X86_CR0_WP,
+				      X86_CR0_WP,
+				      cr4_pinned_bits,
+				      cr4_pinned_mask);
 }
 
 static __init int setup_noclflush(char *arg)

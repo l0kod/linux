@@ -29,6 +29,7 @@
 #include <linux/syscore_ops.h>
 #include <linux/cc_platform.h>
 #include <linux/efi.h>
+#include <linux/init.h>
 #include <asm/timer.h>
 #include <asm/cpu.h>
 #include <asm/traps.h>
@@ -39,6 +40,7 @@
 #include <asm/hypervisor.h>
 #include <asm/tlb.h>
 #include <asm/cpuidle_haltpoll.h>
+#include <asm/cmdline.h>
 #include <asm/ptrace.h>
 #include <asm/reboot.h>
 #include <asm/svm.h>
@@ -921,6 +923,7 @@ static void __init kvm_init_platform(void)
 			       KVM_MIGRATION_READY);
 	}
 	kvmclock_init();
+	kvm_paravirt_cr_pinning_init();
 	x86_platform.apic_post_init = kvm_apic_init;
 }
 
@@ -1095,6 +1098,67 @@ out:
 }
 
 #endif	/* CONFIG_PARAVIRT_SPINLOCKS */
+
+int kvm_paravirt_cr_pinning_enabled __ro_after_init;
+
+void __init kvm_paravirt_cr_pinning_init(void)
+{
+	/*
+	 * We may end up in a state where this kernel has been kexec'd by a
+	 * kernel that has enabled pinning. There are two troublesome
+	 * possibilities at this point.
+	 *
+	 * 1. This kernel is not configured to use pinning
+	 * 2. This kernel was booted with disable_pv_cr_pin
+	 */
+	unsigned int i;
+	u64 already_on = 0;
+	const u32 check_msrs[] = {
+		MSR_KVM_CR0_PINNED_ZERO,
+		MSR_KVM_CR0_PINNED_ONE,
+		MSR_KVM_CR4_PINNED_ZERO,
+		MSR_KVM_CR4_PINNED_ONE,
+	};
+
+	if (!kvm_para_has_feature(KVM_FEATURE_CR_PIN))
+		goto kvm_paravirt_cr_pinning_not_enabled;
+
+	for (i = 0; i < ARRAY_SIZE(check_msrs) && !already_on; i++)
+		rdmsrl(check_msrs[i], already_on);
+
+	if (!IS_ENABLED(CONFIG_PARAVIRT_CR_PINNING) ||
+	    cmdline_find_option_bool(boot_command_line, "disable_pv_cr_pin")) {
+		if (already_on)
+			WARN_ON_ONCE("Paravirtualized CR pinning enabled previously");
+		else
+			goto kvm_paravirt_cr_pinning_not_enabled;
+	}
+
+	kvm_paravirt_cr_pinning_enabled = 1;
+	return;
+
+kvm_paravirt_cr_pinning_not_enabled:
+	kvm_paravirt_cr_pinning_enabled = 0;
+}
+
+void kvm_setup_paravirt_cr_pinning(unsigned long cr0_pinned_bits,
+				   unsigned long cr0_pinned_mask,
+				   unsigned long cr4_pinned_bits,
+				   unsigned long cr4_pinned_mask)
+{
+	u64 mask;
+
+	if (!kvm_paravirt_cr_pinning_enabled)
+		return;
+
+	rdmsrl(MSR_KVM_CR0_PIN_ALLOWED, mask);
+	wrmsrl(MSR_KVM_CR0_PINNED_ZERO, ~cr0_pinned_bits & cr0_pinned_mask & mask);
+	wrmsrl(MSR_KVM_CR0_PINNED_ONE, cr0_pinned_bits & cr0_pinned_mask & mask);
+
+	rdmsrl(MSR_KVM_CR4_PIN_ALLOWED, mask);
+	wrmsrl(MSR_KVM_CR4_PINNED_ZERO, ~cr4_pinned_bits & cr4_pinned_mask & mask);
+	wrmsrl(MSR_KVM_CR4_PINNED_ONE, cr4_pinned_bits & cr4_pinned_mask & mask);
+}
 
 #ifdef CONFIG_ARCH_CPUIDLE_HALTPOLL
 

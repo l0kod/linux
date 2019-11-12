@@ -860,6 +860,21 @@ config PARAVIRT_TIME_ACCOUNTING
 config PARAVIRT_CLOCK
 	bool
 
+config PARAVIRT_CR_PINNING
+	bool "Paravirtualized Control Register Pinning"
+	default y
+	depends on (!KEXEC_CORE || KEXEC_FILE)
+	help
+	  When running as a paravirtualized guest under KVM, make use of KVM's
+	  control register pinning capabilities. Paravirtualized control
+	  register pinning prevents attackers from using ROP/JOP/etc. to disable
+	  protections such as WP, SMAP, SMEP, and UMIP.
+
+	  To enable this option if kexec is enabled, the kexec file based system
+	  call must also be enabled. This is necessary because the file based
+	  system call preforms compatibility checks which cannot be done by the
+	  older load system call.
+
 config JAILHOUSE_GUEST
 	bool "Jailhouse non-root cell support"
 	depends on X86_64 && PCI

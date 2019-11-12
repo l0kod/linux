@@ -1022,6 +1022,17 @@
 			MTRR settings.  This parameter disables that behavior,
 			possibly causing your machine to run very slowly.
 
+	disable_pv_cr_pin [SECURITY,X86]
+			Disable paravirtualized control register pinning. By
+			default, when running paravirtualized under KVM and when
+			kexec support is either not compiled in or disabled, the
+			kernel will request that KVM never allow the disabling
+			of kernel protection features set in CPU control
+			registers. Specifying this option tells the kernel not
+			to request protection of those bits. Native pinning will
+			still be in effect. However, the protection provided by
+			it is not as strong as paravirtualized pinning.
+
 	disable_timer_pin_1 [X86]
 			Disable PIN 1 of APIC timer
 			Can be useful to work around chipset bugs.
