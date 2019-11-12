@@ -389,3 +389,73 @@ data:
         guest is communicating page encryption status to the host using the
         ``KVM_HC_MAP_GPA_RANGE`` hypercall, it can set bit 0 in this MSR to
         allow live migration of the guest.
+
+MSR_KVM_CR0_PIN_ALLOWED:
+	0x4b564d08
+MSR_KVM_CR4_PIN_ALLOWED:
+	0x4b564d09
+
+	Registers informing the guest which bits may be pinned for each control
+	register respectively via the CR pinned MSRs. Read only for the guest.
+	Host VMM may modify which bits are allowed by writing to these
+	registers.
+
+data:
+	Bits which may be pinned.
+
+	Attempting to pin bits other than these will result in a failure when
+	writing to the respective CR pinned MSR.
+
+	Bits which are allowed to be pinned default to WP for CR0 and SMEP,
+	SMAP, UMIP, and FSGSBASE for CR4.
+
+	The host VMM may modify the set of allowed bits. However, only the above
+	have been tested to work. Allowing the guest to pin other bits may or
+	may not be compatible with KVM. When the host VMM writes a 0 to one of
+	these registers the register will be reset to it's default value. Host
+	VMMs wishing to disallow pinning should not expose the CPU feature bit.
+
+	The MSR is available if KVM_FEATURE_CR_PIN is present in CPUID.
+
+MSR_KVM_CR0_PINNED_ZERO:
+	0x4b564d0a
+MSR_KVM_CR0_PINNED_ONE:
+	0x4b564d0b
+MSR_KVM_CR4_PINNED_ZERO:
+	0x4b564d0c
+MSR_KVM_CR4_PINNED_ONE:
+	0x4b564d0d
+
+	Used to configure pinned bits in control registers
+
+data:
+	Bits to be pinned.
+
+	Fails if data contains bits which are not allowed to be pinned. Or if
+	attempting to pin bits one that are already pinned zero, or vice versa.
+	Bits which are allowed to be pinned can be found by reading the CR pin
+	allowed MSRs.
+
+	The MSRs are read/write for host userspace, and write-only for the
+	guest.
+
+	Once set to a non-zero value, the guest cannot clear any of the bits
+	that have been pinned. The guest can pin more bits, so long as those
+	bits appear in the allowed MSR, and are not already pinned to the
+	opposite value.
+
+	Host userspace may clear or change pinned bits at any point. Host
+	userspace must clear pinned bits on reboot.
+
+	The MSR enables bit pinning for control registers. Pinning means if the
+	guest attempts to write values to CR0/4 where bits differ from pinned
+	bits, the write will fail and the guest will be sent a general
+	protection fault. Pinning is active when the guest is not in SMM. If an
+	exit from SMM results in pinned bits becoming unpinned as a result of
+	resotration from SMRAM, the guest will exit. If nested virtualization is
+	enabled and KVM detects that the host VMCS (L1) contains saved CR0/4
+	values which have bits set to values other than what they should be per
+	pinning MSRs, a VMX-abort will be sent to the guest and the offending
+	bits in CR0/4 will be set according to pinning MSRs.
+
+	The MSR is available if KVM_FEATURE_CR_PIN is present in CPUID.

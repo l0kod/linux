@@ -1052,6 +1052,9 @@ static inline int __do_cpuid_func(struct kvm_cpuid_array *array, u32 function)
 			     (1 << KVM_FEATURE_PV_SCHED_YIELD) |
 			     (1 << KVM_FEATURE_ASYNC_PF_INT);
 
+		if (boot_cpu_data.x86_vendor != X86_VENDOR_AMD)
+			entry->eax |= (1 << KVM_FEATURE_CR_PIN);
+
 		if (sched_info_on())
 			entry->eax |= (1 << KVM_FEATURE_STEAL_TIME);
 

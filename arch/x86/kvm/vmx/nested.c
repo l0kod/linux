@@ -4279,11 +4279,27 @@ static void load_vmcs12_host_state(struct kvm_vcpu *vcpu,
 	 * (KVM doesn't change it);
 	 */
 	vcpu->arch.cr0_guest_owned_bits = KVM_POSSIBLE_CR0_GUEST_BITS;
-	vmx_set_cr0(vcpu, vmcs12->host_cr0);
+
+	if (((vmcs12->host_cr0 ^ vcpu->arch.cr0_pinned.one) & vcpu->arch.cr0_pinned.one) ||
+	    ((~vmcs12->host_cr0 ^ vcpu->arch.cr0_pinned.zero) & vcpu->arch.cr0_pinned.zero))
+		nested_vmx_abort(vcpu, VMX_ABORT_VMCS_CORRUPTED);
+
+	vmx_set_cr0(vcpu,
+		    (vmcs12->host_cr0 |
+		     vcpu->arch.cr0_pinned.one) &
+		    ~vcpu->arch.cr0_pinned.zero);
 
 	/* Same as above - no reason to call set_cr4_guest_host_mask().  */
 	vcpu->arch.cr4_guest_owned_bits = ~vmcs_readl(CR4_GUEST_HOST_MASK);
-	vmx_set_cr4(vcpu, vmcs12->host_cr4);
+
+	if (((vmcs12->host_cr4 ^ vcpu->arch.cr4_pinned.one) & vcpu->arch.cr4_pinned.one) ||
+	    ((~vmcs12->host_cr4 ^ vcpu->arch.cr4_pinned.zero) & vcpu->arch.cr4_pinned.zero))
+		nested_vmx_abort(vcpu, VMX_ABORT_VMCS_CORRUPTED);
+
+	vmx_set_cr4(vcpu,
+		    (vmcs12->host_cr4 |
+		     vcpu->arch.cr4_pinned.one) &
+		    ~vcpu->arch.cr4_pinned.zero);
 
 	nested_ept_uninit_mmu_context(vcpu);
 

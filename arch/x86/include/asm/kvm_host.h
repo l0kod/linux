@@ -613,6 +613,12 @@ struct kvm_vcpu_xen {
 	unsigned long evtchn_pending_sel;
 };
 
+struct kvm_vcpu_cr_pinning {
+	unsigned long allowed;
+	unsigned long one;
+	unsigned long zero;
+};
+
 struct kvm_vcpu_arch {
 	/*
 	 * rip and regs accesses must go through
@@ -624,11 +630,13 @@ struct kvm_vcpu_arch {
 
 	unsigned long cr0;
 	unsigned long cr0_guest_owned_bits;
+	struct kvm_vcpu_cr_pinning cr0_pinned;
 	unsigned long cr2;
 	unsigned long cr3;
 	unsigned long cr4;
 	unsigned long cr4_guest_owned_bits;
 	unsigned long cr4_guest_rsvd_bits;
+	struct kvm_vcpu_cr_pinning cr4_pinned;
 	unsigned long cr8;
 	u32 host_pkru;
 	u32 pkru;
