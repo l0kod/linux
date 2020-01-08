@@ -176,6 +176,8 @@ extern u32 *trampoline_cr4_features;
 
 static inline void cr4_set_bits_and_update_boot(unsigned long mask)
 {
+	if (!(mmu_cr4_features ^ (mmu_cr4_features | mask)))
+		return;
 	mmu_cr4_features |= mask;
 	if (trampoline_cr4_features)
 		*trampoline_cr4_features = mmu_cr4_features;
