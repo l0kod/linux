@@ -28,6 +28,7 @@
 /x86_64/set_sregs_test
 /x86_64/sev_migrate_tests
 /x86_64/smm_test
+/x86_64/smm_cr_pin_test
 /x86_64/state_test
 /x86_64/svm_vmcall_test
 /x86_64/svm_int_ctl_test

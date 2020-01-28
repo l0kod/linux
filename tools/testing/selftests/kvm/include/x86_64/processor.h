@@ -239,6 +239,11 @@ static inline uint64_t get_cr0(void)
 	return cr0;
 }
 
+static inline void set_cr0(uint64_t val)
+{
+	__asm__ __volatile__("mov %0, %%cr0" : : "r" (val) : "memory");
+}
+
 static inline uint64_t get_cr3(void)
 {
 	uint64_t cr3;
@@ -493,4 +498,5 @@ void __virt_pg_map(struct kvm_vm *vm, uint64_t vaddr, uint64_t paddr,
 #define XSTATE_XTILE_DATA_MASK		(1ULL << XSTATE_XTILE_DATA_BIT)
 #define XFEATURE_XTILE_MASK		(XSTATE_XTILE_CFG_MASK | \
 					XSTATE_XTILE_DATA_MASK)
+
 #endif /* SELFTEST_KVM_PROCESSOR_H */
