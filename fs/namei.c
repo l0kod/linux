@@ -39,6 +39,7 @@
 #include <linux/bitops.h>
 #include <linux/init_task.h>
 #include <linux/uaccess.h>
+#include <linux/sysctl.h>
 
 #include "internal.h"
 #include "mount.h"
@@ -411,10 +412,40 @@ static int sb_permission(struct super_block *sb, struct inode *inode, int mask)
 	return 0;
 }
 
+#define OMAYEXEC_ENFORCE_NONE	0
+#define OMAYEXEC_ENFORCE_MOUNT	(1 << 0)
+#define OMAYEXEC_ENFORCE_FILE	(1 << 1)
+#define _OMAYEXEC_LAST		OMAYEXEC_ENFORCE_FILE
+#define _OMAYEXEC_MASK		((_OMAYEXEC_LAST << 1) - 1)
+
+/**
+ * omayexec_inode_permission - Check RESOLVE_MAYEXEC before accessing an inode
+ *
+ * @inode: Inode to check permission on
+ * @mask: Right to check for (%MAY_OPENEXEC, %MAY_EXECMOUNT, %MAY_EXEC)
+ *
+ * Returns 0 if access is permitted, -EACCES otherwise.
+ */
+static inline int omayexec_inode_permission(struct inode *inode, int mask)
+{
+	if (!(mask & MAY_OPENEXEC))
+		return 0;
+
+	if ((sysctl_omayexec_enforce & OMAYEXEC_ENFORCE_MOUNT) &&
+			!(mask & MAY_EXECMOUNT))
+		return -EACCES;
+
+	if (sysctl_omayexec_enforce & OMAYEXEC_ENFORCE_FILE)
+		return generic_permission(inode, MAY_EXEC);
+
+	return 0;
+}
+
 /**
  * inode_permission - Check for access rights to a given inode
  * @inode: Inode to check permission on
- * @mask: Right to check for (%MAY_READ, %MAY_WRITE, %MAY_EXEC)
+ * @mask: Right to check for (%MAY_READ, %MAY_WRITE, %MAY_EXEC, %MAY_OPENEXEC,
+ *        %MAY_EXECMOUNT)
  *
  * Check for read/write/execute permissions on an inode.  We use fs[ug]id for
  * this, letting us set arbitrary permissions for filesystem access without
@@ -454,9 +485,47 @@ int inode_permission(struct inode *inode, int mask)
 	if (retval)
 		return retval;
 
+	retval = omayexec_inode_permission(inode, mask);
+	if (retval)
+		return retval;
+
 	return security_inode_permission(inode, mask);
 }
 EXPORT_SYMBOL(inode_permission);
+
+/*
+ * Handle open_mayexec_enforce sysctl
+ */
+#ifdef CONFIG_SYSCTL
+int proc_omayexec(struct ctl_table *table, int write, void __user *buffer,
+		size_t *lenp, loff_t *ppos)
+{
+	int error;
+
+	if (write) {
+		struct ctl_table table_copy;
+		int tmp_mayexec_enforce;
+
+		if (!capable(CAP_MAC_ADMIN))
+			return -EPERM;
+		tmp_mayexec_enforce = *((int *)table->data);
+		table_copy = *table;
+		/* Do not erase sysctl_omayexec_enforce. */
+		table_copy.data = &tmp_mayexec_enforce;
+		error = proc_dointvec(&table_copy, write, buffer, lenp, ppos);
+		if (error)
+			return error;
+		if ((tmp_mayexec_enforce | _OMAYEXEC_MASK) != _OMAYEXEC_MASK)
+			return -EINVAL;
+		*((int *)table->data) = tmp_mayexec_enforce;
+	} else {
+		error = proc_dointvec(table, write, buffer, lenp, ppos);
+		if (error)
+			return error;
+	}
+	return 0;
+}
+#endif
 
 /**
  * path_get - get a reference to a path
@@ -922,6 +991,7 @@ int sysctl_protected_symlinks __read_mostly = 0;
 int sysctl_protected_hardlinks __read_mostly = 0;
 int sysctl_protected_fifos __read_mostly;
 int sysctl_protected_regular __read_mostly;
+int sysctl_omayexec_enforce __read_mostly = OMAYEXEC_ENFORCE_NONE;
 
 /**
  * may_follow_link - Check symlink following for unsafe situations
