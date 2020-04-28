@@ -35,5 +35,11 @@ struct open_how {
 #define RESOLVE_IN_ROOT		0x10 /* Make all jumps to "/" and ".."
 					be scoped inside the dirfd
 					(similar to chroot(2)). */
+#define RESOLVE_MAYEXEC		0x20 /* Code execution from the target file is
+					intended, checks such permission.  A
+					simple policy can be enforced
+					system-wide as explained in
+					Documentation/admin-guide/sysctl/fs.rst
+					*/
 
 #endif /* _UAPI_LINUX_OPENAT2_H */

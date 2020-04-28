@@ -1029,6 +1029,12 @@ inline int build_open_flags(const struct open_how *how, struct open_flags *op)
 	if (flags & __O_SYNC)
 		flags |= O_DSYNC;
 
+	/* Checks execution permissions on open. */
+	if (how->resolve & RESOLVE_MAYEXEC) {
+		acc_mode |= MAY_OPENEXEC;
+		flags |= __FMODE_EXEC;
+	}
+
 	op->open_flag = flags;
 
 	/* O_TRUNC implies we need access checks for write permissions */
