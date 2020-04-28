@@ -9,6 +9,7 @@
 
 #define _GNU_SOURCE
 #include <stdint.h>
+#include <stdbool.h>
 #include <errno.h>
 #include <linux/types.h>
 #include "../kselftest.h"
@@ -60,6 +61,8 @@ bool needs_openat2(const struct open_how *how);
 #define RESOLVE_IN_ROOT		0x10 /* Make all jumps to "/" and ".."
 					be scoped inside the dirfd
 					(similar to chroot(2)). */
+#define RESOLVE_MAYEXEC		0x20 /* Command execution from file is
+					intended, checks exec permissions. */
 #endif /* RESOLVE_IN_ROOT */
 
 #define E_func(func, ...)						\
