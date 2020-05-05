@@ -230,6 +230,32 @@ config STATIC_USERMODEHELPER_PATH
 	  If you wish for all usermode helper programs to be disabled,
 	  specify an empty string here (i.e. "").
 
+menuconfig OMAYEXEC_STATIC
+	tristate "Configure O_MAYEXEC behavior at build time"
+	---help---
+	  Enable to enforce O_MAYEXEC at build time, and disable the dedicated
+	  fs.open_mayexec_enforce sysctl.
+
+	  See Documentation/admin-guide/sysctl/fs.rst for more details.
+
+if OMAYEXEC_STATIC
+
+config OMAYEXEC_ENFORCE_MOUNT
+	bool "Mount restriction"
+	default y
+	---help---
+	  Forbid opening files with the O_MAYEXEC option if their underlying VFS is
+	  mounted with the noexec option or if their superblock forbids execution
+	  of its content (e.g., /proc).
+
+config OMAYEXEC_ENFORCE_FILE
+	bool "File permission restriction"
+	---help---
+	  Forbid opening files with the O_MAYEXEC option if they are not marked as
+	  executable for the current process (e.g., POSIX permissions).
+
+endif # OMAYEXEC_STATIC
+
 source "security/selinux/Kconfig"
 source "security/smack/Kconfig"
 source "security/tomoyo/Kconfig"

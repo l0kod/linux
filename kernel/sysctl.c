@@ -1892,6 +1892,15 @@ static struct ctl_table fs_table[] = {
 		.extra1		= SYSCTL_ZERO,
 		.extra2		= &two,
 	},
+#ifndef CONFIG_OMAYEXEC_STATIC
+	{
+		.procname       = "open_mayexec_enforce",
+		.data           = &sysctl_omayexec_enforce,
+		.maxlen         = sizeof(int),
+		.mode           = 0600,
+		.proc_handler   = proc_omayexec,
+	},
+#endif
 #if defined(CONFIG_BINFMT_MISC) || defined(CONFIG_BINFMT_MISC_MODULE)
 	{
 		.procname	= "binfmt_misc",
