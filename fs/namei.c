@@ -39,6 +39,7 @@
 #include <linux/bitops.h>
 #include <linux/init_task.h>
 #include <linux/uaccess.h>
+#include <linux/sysctl.h>
 
 #include "internal.h"
 #include "mount.h"
@@ -425,10 +426,15 @@ static int sb_permission(struct super_block *sb, struct inode *inode, int mask)
 	return 0;
 }
 
+#define OPEN_MAYEXEC_ENFORCE_MOUNT	BIT(0)
+#define OPEN_MAYEXEC_ENFORCE_FILE	BIT(1)
+
+int sysctl_open_mayexec_enforce __read_mostly;
+
 /**
  * inode_permission - Check for access rights to a given inode
  * @inode: Inode to check permission on
- * @mask: Right to check for (%MAY_READ, %MAY_WRITE, %MAY_EXEC)
+ * @mask: Right to check for (%MAY_READ, %MAY_WRITE, %MAY_EXEC, %MAY_OPENEXEC)
  *
  * Check for read/write/execute permissions on an inode.  We use fs[ug]id for
  * this, letting us set arbitrary permissions for filesystem access without
@@ -2849,7 +2855,7 @@ static int may_open(const struct path *path, int acc_mode, int flag)
 	case S_IFLNK:
 		return -ELOOP;
 	case S_IFDIR:
-		if (acc_mode & (MAY_WRITE | MAY_EXEC))
+		if (acc_mode & (MAY_WRITE | MAY_EXEC | MAY_OPENEXEC))
 			return -EISDIR;
 		break;
 	case S_IFBLK:
@@ -2859,13 +2865,26 @@ static int may_open(const struct path *path, int acc_mode, int flag)
 		fallthrough;
 	case S_IFIFO:
 	case S_IFSOCK:
-		if (acc_mode & MAY_EXEC)
+		if (acc_mode & (MAY_EXEC | MAY_OPENEXEC))
 			return -EACCES;
 		flag &= ~O_TRUNC;
 		break;
 	case S_IFREG:
-		if ((acc_mode & MAY_EXEC) && path_noexec(path))
-			return -EACCES;
+		if (path_noexec(path)) {
+			if (acc_mode & MAY_EXEC)
+				return -EACCES;
+			if ((acc_mode & MAY_OPENEXEC) &&
+					(sysctl_open_mayexec_enforce & OPEN_MAYEXEC_ENFORCE_MOUNT))
+				return -EACCES;
+		}
+		if ((acc_mode & MAY_OPENEXEC) &&
+				(sysctl_open_mayexec_enforce & OPEN_MAYEXEC_ENFORCE_FILE))
+			/*
+			 * Because acc_mode may change here, the next and only
+			 * use of acc_mode should then be by the following call
+			 * to inode_permission().
+			 */
+			acc_mode |= MAY_EXEC;
 		break;
 	}
 
