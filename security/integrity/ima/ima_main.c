@@ -490,7 +490,8 @@ int ima_file_check(struct file *file, int mask)
 
 	security_task_getsecid(current, &secid);
 	return process_measurement(file, current_cred(), secid, NULL, 0,
-				   mask & (MAY_READ | MAY_WRITE | MAY_EXEC |
+				   mask & (MAY_READ | MAY_WRITE |
+					   MAY_EXEC | MAY_OPENEXEC |
 					   MAY_APPEND), FILE_CHECK);
 }
 EXPORT_SYMBOL_GPL(ima_file_check);
