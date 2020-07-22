@@ -288,8 +288,8 @@ SYM_FUNC_START(startup_32)
 	pushl	$__KERNEL_CS
 	pushl	%eax
 
-	/* Enter paged protected Mode, activating Long Mode */
-	movl	$(X86_CR0_PG | X86_CR0_PE), %eax /* Enable Paging and Protected mode */
+	/* Enter paged protected Mode, activating Long Mode and write protect */
+	movl	$(X86_CR0_PG | X86_CR0_PE | X86_CR0_WP), %eax
 	movl	%eax, %cr0
 
 	/* Jump from 32bit compatibility mode into 64bit mode. */
@@ -648,7 +648,10 @@ SYM_CODE_START(trampoline_32bit_src)
 	popl	%ecx
 
 	/* Enable PAE and LA57 (if required) paging modes */
-	movl	$X86_CR4_PAE, %eax
+	movl	%cr4, %eax
+	/* Keep protections enabled if already enabled */
+	andl	$(X86_CR4_SMEP | X86_CR4_SMAP | X86_CR4_UMIP | X86_CR4_FSGSBASE), %eax
+	orl	$X86_CR4_PAE, %eax
 	testl	%edx, %edx
 	jz	1f
 	orl	$X86_CR4_LA57, %eax
@@ -663,7 +666,7 @@ SYM_CODE_START(trampoline_32bit_src)
 	pushl	%eax
 
 	/* Enable paging again */
-	movl	$(X86_CR0_PG | X86_CR0_PE), %eax
+	movl	$(X86_CR0_PG | X86_CR0_PE | X86_CR0_WP), %eax
 	movl	%eax, %cr0
 
 	lret

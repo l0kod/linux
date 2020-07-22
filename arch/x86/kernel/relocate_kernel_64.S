@@ -118,26 +118,28 @@ SYM_CODE_START_LOCAL_NOALIGN(identity_mapped)
 	 * Set cr0 to a known state:
 	 *  - Paging enabled
 	 *  - Alignment check disabled
-	 *  - Write protect disabled
 	 *  - No task switch
 	 *  - Don't do FP software emulation.
 	 *  - Protected mode enabled
+	 *  - Write protect enabled
 	 */
 	movq	%cr0, %rax
-	andq	$~(X86_CR0_AM | X86_CR0_WP | X86_CR0_TS | X86_CR0_EM), %rax
-	orl	$(X86_CR0_PG | X86_CR0_PE), %eax
+	andq	$~(X86_CR0_AM | X86_CR0_TS | X86_CR0_EM), %rax
+	orl	$(X86_CR0_PG | X86_CR0_PE | X86_CR0_WP), %eax
 	movq	%rax, %cr0
 
 	/*
 	 * Set cr4 to a known state:
 	 *  - physical address extension enabled
 	 *  - 5-level paging, if it was enabled before
+	 *  - SMEP, if it was enabled before
+	 *  - SMAP, if it was enabled before
+	 *  - UMIP, if it was enabled before
+	 *  - FSGSBASE, if it was enabled before
 	 */
-	movl	$X86_CR4_PAE, %eax
-	testq	$X86_CR4_LA57, %r13
-	jz	1f
-	orl	$X86_CR4_LA57, %eax
-1:
+	movq	%r13, %rax
+	andl	$(X86_CR4_LA57 | X86_CR4_SMEP | X86_CR4_SMAP | X86_CR4_UMIP | X86_CR4_FSGSBASE), %eax
+	orl	$X86_CR4_PAE, %eax
 	movq	%rax, %cr4
 
 	jmp 1f
