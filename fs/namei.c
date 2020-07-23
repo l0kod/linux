@@ -39,6 +39,7 @@
 #include <linux/bitops.h>
 #include <linux/init_task.h>
 #include <linux/uaccess.h>
+#include <linux/sysctl.h>
 
 #include "internal.h"
 #include "mount.h"
@@ -424,6 +425,11 @@ static int sb_permission(struct super_block *sb, struct inode *inode, int mask)
 	}
 	return 0;
 }
+
+#define OPEN_MAYEXEC_ENFORCE_MOUNT	BIT(0)
+#define OPEN_MAYEXEC_ENFORCE_FILE	BIT(1)
+
+int sysctl_open_mayexec_enforce __read_mostly;
 
 /**
  * inode_permission - Check for access rights to a given inode
@@ -2861,11 +2867,29 @@ static int may_open(const struct path *path, int acc_mode, int flag)
 	case S_IFSOCK:
 		if (acc_mode & MAY_EXEC)
 			return -EACCES;
+		/*
+		 * Opening devices (e.g. TTYs) or pipes with O_MAYEXEC may be
+		 * legitimate when there is no enforced policy.
+		 */
+		if ((acc_mode & MAY_OPENEXEC) && sysctl_open_mayexec_enforce)
+			return -EACCES;
 		flag &= ~O_TRUNC;
 		break;
 	case S_IFREG:
 		if ((acc_mode & MAY_EXEC) && path_noexec(path))
 			return -EACCES;
+		if (acc_mode & MAY_OPENEXEC) {
+			if ((sysctl_open_mayexec_enforce & OPEN_MAYEXEC_ENFORCE_MOUNT)
+					&& path_noexec(path))
+				return -EACCES;
+			if (sysctl_open_mayexec_enforce & OPEN_MAYEXEC_ENFORCE_FILE)
+				/*
+				 * Because acc_mode may change here, the next and only
+				 * use of acc_mode should then be by the following call
+				 * to inode_permission().
+				 */
+				acc_mode |= MAY_EXEC;
+		}
 		break;
 	}
 
