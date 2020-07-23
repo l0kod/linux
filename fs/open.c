@@ -987,6 +987,8 @@ inline struct open_how build_open_how(int flags, umode_t mode)
 		.mode = mode & S_IALLUGO,
 	};
 
+	/* O_MAYEXEC is ignored by syscalls relying on build_open_how(). */
+	how.flags &= ~O_MAYEXEC;
 	/* O_PATH beats everything else. */
 	if (how.flags & O_PATH)
 		how.flags &= O_PATH_FLAGS;
@@ -1053,6 +1055,10 @@ inline int build_open_flags(const struct open_how *how, struct open_flags *op)
 	 */
 	if (flags & __O_SYNC)
 		flags |= O_DSYNC;
+
+	/* Checks execution permissions on open. */
+	if (flags & O_MAYEXEC)
+		acc_mode |= MAY_OPENEXEC;
 
 	op->open_flag = flags;
 

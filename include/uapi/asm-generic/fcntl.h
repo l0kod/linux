@@ -97,6 +97,13 @@
 #define O_NDELAY	O_NONBLOCK
 #endif
 
+/*
+ * Code execution from file is intended, checks such permission.  A simple
+ * policy can be enforced system-wide as explained in
+ * Documentation/admin-guide/sysctl/fs.rst .
+ */
+#define O_MAYEXEC	040000000
+
 #define F_DUPFD		0	/* dup */
 #define F_GETFD		1	/* get close_on_exec */
 #define F_SETFD		2	/* set/clear close_on_exec */
