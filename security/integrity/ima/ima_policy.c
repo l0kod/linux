@@ -406,7 +406,8 @@ static bool ima_match_keyring(struct ima_rule_entry *rule,
  * @cred: a pointer to a credentials structure for user validation
  * @secid: the secid of the task to be validated
  * @func: LIM hook identifier
- * @mask: requested action (MAY_READ | MAY_WRITE | MAY_APPEND | MAY_EXEC)
+ * @mask: requested action (MAY_READ | MAY_WRITE | MAY_APPEND | MAY_EXEC |
+ *			    MAY_OPENEXEC)
  * @keyring: keyring name to check in policy for KEY_CHECK func
  *
  * Returns true on rule match, false on failure.
@@ -527,7 +528,8 @@ static int get_subaction(struct ima_rule_entry *rule, enum ima_hooks func)
  *        being made
  * @secid: LSM secid of the task to be validated
  * @func: IMA hook identifier
- * @mask: requested action (MAY_READ | MAY_WRITE | MAY_APPEND | MAY_EXEC)
+ * @mask: requested action (MAY_READ | MAY_WRITE | MAY_APPEND | MAY_EXEC |
+ *			    MAY_OPENEXEC)
  * @pcr: set the pcr to extend
  * @template_desc: the template that should be used for this rule
  * @keyring: the keyring name, if given, to be used to check in the policy.
@@ -1091,6 +1093,8 @@ static int ima_parse_rule(char *rule, struct ima_rule_entry *entry)
 				entry->mask = MAY_READ;
 			else if (strcmp(from, "MAY_APPEND") == 0)
 				entry->mask = MAY_APPEND;
+			else if (strcmp(from, "MAY_OPENEXEC") == 0)
+				entry->mask = MAY_OPENEXEC;
 			else
 				result = -EINVAL;
 			if (!result)
@@ -1422,14 +1426,15 @@ const char *const func_tokens[] = {
 
 #ifdef	CONFIG_IMA_READ_POLICY
 enum {
-	mask_exec = 0, mask_write, mask_read, mask_append
+	mask_exec = 0, mask_write, mask_read, mask_append, mask_openexec
 };
 
 static const char *const mask_tokens[] = {
 	"^MAY_EXEC",
 	"^MAY_WRITE",
 	"^MAY_READ",
-	"^MAY_APPEND"
+	"^MAY_APPEND",
+	"^MAY_OPENEXEC"
 };
 
 void *ima_policy_start(struct seq_file *m, loff_t *pos)
@@ -1518,6 +1523,8 @@ int ima_policy_show(struct seq_file *m, void *v)
 			seq_printf(m, pt(Opt_mask), mt(mask_read) + offset);
 		if (entry->mask & MAY_APPEND)
 			seq_printf(m, pt(Opt_mask), mt(mask_append) + offset);
+		if (entry->mask & MAY_OPENEXEC)
+			seq_printf(m, pt(Opt_mask), mt(mask_openexec) + offset);
 		seq_puts(m, " ");
 	}
 
