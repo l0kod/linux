@@ -225,6 +225,11 @@ static inline int kexec_load_check(unsigned long nr_segments,
 	if (nr_segments > KEXEC_SEGMENT_MAX)
 		return -EINVAL;
 
+	/* Architecture specific check */
+	result = arch_kexec_load_check(nr_segments, flags);
+	if (result)
+		return result;
+
 	return 0;
 }
 
