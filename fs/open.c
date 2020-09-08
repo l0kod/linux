@@ -32,6 +32,7 @@
 #include <linux/ima.h>
 #include <linux/dnotify.h>
 #include <linux/compat.h>
+#include <linux/sysctl.h>
 
 #include "internal.h"
 
@@ -394,6 +395,11 @@ static const struct cred *access_override_creds(void)
 	return old_cred;
 }
 
+#define INTERPRETED_EXEC_MOUNT		BIT(0)
+#define INTERPRETED_EXEC_FILE		BIT(1)
+
+int sysctl_interpreted_access __read_mostly;
+
 static long do_faccessat(int dfd, const char __user *filename, int mode, int flags)
 {
 	struct path path;
@@ -443,13 +449,43 @@ retry:
 		 */
 		if ((mode & MAY_EXEC)) {
 			mode |= MAY_INTERPRETED_EXEC;
+			res = -EACCES;
+			/*
+			 * If there is a system-wide execute policy enforced,
+			 * then forbids access to non-regular files and special
+			 * superblocks.
+			 */
+			if ((sysctl_interpreted_access & (INTERPRETED_EXEC_MOUNT |
+							INTERPRETED_EXEC_FILE))) {
+				if (!S_ISREG(inode->i_mode))
+					goto out_path_release;
+				/*
+				 * Denies access to pseudo filesystems that
+				 * will never be mountable (e.g. sockfs,
+				 * pipefs) but can still be reachable through
+				 * /proc/self/fd, or memfd-like file
+				 * descriptors, or nsfs-like files.
+				 *
+				 * According to the tests, SB_NOEXEC seems to
+				 * be only used by proc and nsfs filesystems.
+				 * Is it correct?
+				 */
+				if ((path.dentry->d_sb->s_flags &
+							(SB_NOUSER | SB_KERNMOUNT | SB_NOEXEC)))
+					goto out_path_release;
+			}
+
+			if ((sysctl_interpreted_access & INTERPRETED_EXEC_MOUNT) &&
+					path_noexec(&path))
+				goto out_path_release;
 			/*
 			 * For compatibility reasons, if the system-wide policy
 			 * doesn't enforce file permission checks, then
 			 * replaces the execute permission request with a read
 			 * permission request.
 			 */
-			mode &= ~MAY_EXEC;
+			if (!(sysctl_interpreted_access & INTERPRETED_EXEC_FILE))
+				mode &= ~MAY_EXEC;
 			/* To be executed *by* user space, files must be readable. */
 			mode |= MAY_READ;
 		}

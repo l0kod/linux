@@ -36,6 +36,7 @@ Currently, these files are in /proc/sys/fs:
 - inode-max
 - inode-nr
 - inode-state
+- interpreted_access
 - nr_open
 - overflowuid
 - overflowgid
@@ -163,6 +164,59 @@ Nr_free_inodes represents the number of free inodes (?) and
 preshrink is nonzero when the nr_inodes > inode-max and the
 system needs to prune the inode list instead of allocating
 more.
+
+
+interpreted_access
+------------------
+
+The ``AT_INTERPRETED`` flag with an ``X_OK`` mode can be passed to
+:manpage:`faccessat2(2)` by an interpreter to check that regular files are
+expected to be executable.  If the file is not identified as executable, then
+the syscall returns -EACCES.  This may allow a script interpreter to check
+executable permission before reading commands from a file, or a dynamic linker
+to only load executable shared objects.  One interesting use case is to enforce
+a "write xor execute" policy through interpreters.
+
+To avoid race-conditions, it is highly recommended to first open the file and
+then do the check on the new file descriptor thanks to the ``AT_EMPTY_PATH``
+flag.
+
+The ability to restrict code execution must be thought as a system-wide policy,
+which first starts by restricting mount points with the ``noexec`` option.
+This option is also automatically applied to special filesystems such as /proc .
+This prevents files on such mount points to be directly executed by the kernel
+or mapped as executable memory (e.g. libraries).  With script interpreters
+using :manpage:`faccessat2(2)` and ``AT_INTERPRETED``, the executable
+permission can then be checked before reading commands from files.  This makes
+it possible to enforce the ``noexec`` at the interpreter level, and thus
+propagates this security policy to scripts.  To be fully effective, these
+interpreters also need to handle the other ways to execute code: command line
+parameters (e.g., option ``-e`` for Perl), module loading (e.g., option ``-m``
+for Python), stdin, file sourcing, environment variables, configuration files,
+etc.  According to the threat model, it may be acceptable to allow some script
+interpreters (e.g. Bash) to interpret commands from stdin, may it be a TTY or a
+pipe, because it may not be enough to (directly) perform syscalls.
+
+There are two complementary security policies: enforce the ``noexec`` mount
+option, and enforce executable file permission.  These policies are handled by
+the ``fs.interpreted_access`` sysctl (writable only with ``CAP_SYS_ADMIN``)
+as a bitmask:
+
+1 - Mount restriction: checks that the mount options for the underlying VFS
+    mount do not prevent execution.
+
+2 - File permission restriction: checks that the file is marked as
+    executable for the current process (e.g., POSIX permissions, ACLs).
+
+Note that as long as a policy is enforced, checking any non-regular file with
+``AT_INTERPRETED`` returns -EINVAL (e.g. TTYs, pipe), even when such a file is
+marked as executable or is on an executable mount point.
+
+Code samples can be found in
+tools/testing/selftests/interpreter/interpreted_access_test.c and interpreter
+patches (for the original O_MAYEXEC) are available at
+https://github.com/clipos-archive/clipos4_portage-overlay/search?q=O_MAYEXEC .
+See also an overview article: https://lwn.net/Articles/820000/ .
 
 
 overflowgid & overflowuid
