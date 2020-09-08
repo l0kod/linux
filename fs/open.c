@@ -405,9 +405,13 @@ static long do_faccessat(int dfd, const char __user *filename, int mode, int fla
 	if (mode & ~S_IRWXO)	/* where's F_OK, X_OK, W_OK, R_OK? */
 		return -EINVAL;
 
-	if (flags & ~(AT_EACCESS | AT_SYMLINK_NOFOLLOW | AT_EMPTY_PATH))
+	if (flags & ~(AT_EACCESS | AT_SYMLINK_NOFOLLOW | AT_EMPTY_PATH |
+				AT_INTERPRETED))
 		return -EINVAL;
 
+	/* Only allows X_OK with AT_INTERPRETED for now. */
+	if ((flags & AT_INTERPRETED) && !(mode & S_IXOTH))
+		return -EINVAL;
 	if (flags & AT_SYMLINK_NOFOLLOW)
 		lookup_flags &= ~LOOKUP_FOLLOW;
 	if (flags & AT_EMPTY_PATH)
@@ -426,7 +430,30 @@ retry:
 
 	inode = d_backing_inode(path.dentry);
 
-	if ((mode & MAY_EXEC) && S_ISREG(inode->i_mode)) {
+	if ((flags & AT_INTERPRETED)) {
+		/*
+		 * For compatibility reasons, without a defined security policy
+		 * (via sysctl or LSM), using AT_INTERPRETED must map the
+		 * execute permission to the read permission.  Indeed, from
+		 * user space point of view, being able to execute data (e.g.
+		 * scripts) implies to be able to read this data.
+		 *
+		 * The MAY_INTERPRETED_EXEC bit is set to enable LSMs to add
+		 * custom checks, while being compatible with current policies.
+		 */
+		if ((mode & MAY_EXEC)) {
+			mode |= MAY_INTERPRETED_EXEC;
+			/*
+			 * For compatibility reasons, if the system-wide policy
+			 * doesn't enforce file permission checks, then
+			 * replaces the execute permission request with a read
+			 * permission request.
+			 */
+			mode &= ~MAY_EXEC;
+			/* To be executed *by* user space, files must be readable. */
+			mode |= MAY_READ;
+		}
+	} else if ((mode & MAY_EXEC) && S_ISREG(inode->i_mode)) {
 		/*
 		 * MAY_EXEC on regular files is denied if the fs is mounted
 		 * with the "noexec" flag.

@@ -90,7 +90,8 @@
  * unlinkat.  The two functions do completely different things and therefore,
  * the flags can be allowed to overlap.  For example, passing AT_REMOVEDIR to
  * faccessat would be undefined behavior and thus treating it equivalent to
- * AT_EACCESS is valid undefined behavior.
+ * AT_EACCESS is valid undefined behavior.  The same goes for AT_SYMLINK_FOLLOW
+ * and AT_INTERPRETED.
  */
 #define AT_FDCWD		-100    /* Special value used to indicate
                                            openat should use the current
@@ -100,6 +101,15 @@
                                            effective IDs, not real IDs.  */
 #define AT_REMOVEDIR		0x200   /* Remove directory instead of
                                            unlinking file.  */
+#define AT_INTERPRETED		0x400	/* Check if the current process should
+					   grant access (e.g. execution) for a
+					   specific file, i.e. enables RWX to
+					   be enforced *by* user space.  The
+					   main usage is for script
+					   interpreters to enforce a policy
+					   consistent with the kernel's one
+					   (through sysctl configuration or LSM
+					   policy).  */
 #define AT_SYMLINK_FOLLOW	0x400   /* Follow symbolic links.  */
 #define AT_NO_AUTOMOUNT		0x800	/* Suppress terminal automount traversal */
 #define AT_EMPTY_PATH		0x1000	/* Allow empty relative pathname */
