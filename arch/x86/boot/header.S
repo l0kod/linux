@@ -432,7 +432,9 @@ xloadflags:
 #define XLF56 0
 #endif
 
-			.word XLF0 | XLF1 | XLF23 | XLF4 | XLF56
+# define XLF7 XLF_PARAVIRT_CR_PINNING
+
+			.word XLF0 | XLF1 | XLF23 | XLF4 | XLF56 | XLF7
 
 cmdline_size:   .long   COMMAND_LINE_SIZE-1     #length of the command line,
                                                 #added with boot protocol

@@ -18,6 +18,7 @@
 #include <linux/mm.h>
 #include <linux/efi.h>
 #include <linux/verification.h>
+#include <linux/kvm_para.h>
 
 #include <asm/bootparam.h>
 #include <asm/setup.h>
@@ -311,6 +312,13 @@ static int bzImage64_probe(const char *buf, unsigned long len)
 
 	if (!(header->xloadflags & XLF_5LEVEL) && pgtable_l5_enabled()) {
 		pr_err("bzImage cannot handle 5-level paging mode.\n");
+		return ret;
+	}
+
+	if (!(header->xloadflags & XLF_PARAVIRT_CR_PINNING) &&
+	    IS_ENABLED(CONFIG_PARAVIRT_CR_PINNING) &&
+	    kvm_paravirt_cr_pinning_enabled) {
+		pr_err("bzImage cannot handle paravirtualized control register pinning.\n");
 		return ret;
 	}
 

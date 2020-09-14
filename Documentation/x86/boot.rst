@@ -722,6 +722,12 @@ Protocol:	2.12+
 
 	- If 1, the kernel supports kexec EFI boot with EFI runtime support.
 
+  Bit 7 (read): XLF_PARAVIRT_CR_PINNING
+
+	- If 1, the kernel supports being kexec'd from a kernel with
+	  paravirtualed control register pinning enabled. This means that
+	  protections set via bits in control registers will stay set through
+	  the transition to a new kernel.
 
 ============	============
 Field name:	cmdline_size
