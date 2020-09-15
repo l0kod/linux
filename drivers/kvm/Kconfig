@@ -1,0 +1,17 @@
+menu "KVM driver support"
+	depends on KVM_GUEST
+
+config KVM_SYS_HYPERVISOR
+	bool "Create KVM entries under /sys/hypervisor"
+	depends on SYSFS && PARAVIRT_CR_PINNING
+	select SYS_HYPERVISOR
+	default y
+	help
+	  sysfs entries for Linux guests running under KVM. Expose status of KVM
+	  features, whether they are in use or not.
+
+	  Currently exposes a pv_cr_pinning entry under /sys/hypervisor if
+	  paravirtualized control register pinning is configured. The contents
+	  of the file are 0 for disabled or 1 for enabled.
+
+endmenu

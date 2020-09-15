@@ -143,6 +143,8 @@ source "drivers/vhost/Kconfig"
 
 source "drivers/hv/Kconfig"
 
+source "drivers/kvm/Kconfig"
+
 source "drivers/xen/Kconfig"
 
 source "drivers/greybus/Kconfig"
