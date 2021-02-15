@@ -243,6 +243,7 @@ source "security/integrity/Kconfig"
 
 choice
 	prompt "First legacy 'major LSM' to be initialized"
+	depends on SECURITY
 	default DEFAULT_SECURITY_SELINUX if SECURITY_SELINUX
 	default DEFAULT_SECURITY_SMACK if SECURITY_SMACK
 	default DEFAULT_SECURITY_TOMOYO if SECURITY_TOMOYO
@@ -275,8 +276,26 @@ choice
 
 endchoice
 
+config LSM_AUTO
+	bool "Automatically enable all selected LSMs at boot"
+	depends on SECURITY
+	default y
+	help
+	  This automatically configure the build-time selected LSMs to be
+	  enabled at boot unless the "lsm=" parameter is provided.
+
+	  If this option is not selected, it will be required to configure and
+	  maintained a static list of enabled LSMs that may become inconsistent
+	  with future user configuration.  Indeed, this list will not be
+	  automatically upgraded when selecting a new (future) LSM, e.g. with
+	  make oldconfig.
+
+	  If you are unsure how to answer this question, answer Y.
+
+# This lists should be synchronized with LSM_ORDER defined in security/security.c .
 config LSM
 	string "Ordered list of enabled LSMs"
+	depends on SECURITY && !LSM_AUTO
 	default "lockdown,yama,loadpin,safesetid,integrity,smack,selinux,tomoyo,apparmor,bpf" if DEFAULT_SECURITY_SMACK
 	default "lockdown,yama,loadpin,safesetid,integrity,apparmor,selinux,smack,tomoyo,bpf" if DEFAULT_SECURITY_APPARMOR
 	default "lockdown,yama,loadpin,safesetid,integrity,tomoyo,bpf" if DEFAULT_SECURITY_TOMOYO

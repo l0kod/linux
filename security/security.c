@@ -82,7 +82,31 @@ static struct lsm_blob_sizes blob_sizes __lsm_ro_after_init;
 static __initdata const char *chosen_lsm_order;
 static __initdata const char *chosen_major_lsm;
 
-static __initconst const char * const builtin_lsm_order = CONFIG_LSM;
+#ifdef CONFIG_LSM
+#define LSM_ORDER	CONFIG_LSM
+#else
+
+/*
+ * This lists should be synchronized with the default values of CONFIG_LSM
+ * defined in security/Kconfig .
+ */
+#define LSM_ORDER_PRE	"lockdown,yama,loadpin,safesetid,integrity,"
+
+#if defined(CONFIG_DEFAULT_SECURITY_SMACK)
+#define LSM_ORDER	LSM_ORDER_PRE "smack,selinux,tomoyo,apparmor,bpf"
+#elif defined(CONFIG_DEFAULT_SECURITY_APPARMOR)
+#define LSM_ORDER	LSM_ORDER_PRE "apparmor,selinux,smack,tomoyo,bpf"
+#elif defined(CONFIG_DEFAULT_SECURITY_TOMOYO)
+#define LSM_ORDER	LSM_ORDER_PRE "tomoyo,bpf"
+#elif defined(CONFIG_DEFAULT_SECURITY_DAC)
+#define LSM_ORDER	LSM_ORDER_PRE "bpf"
+#else
+#define LSM_ORDER	LSM_ORDER_PRE "selinux,smack,tomoyo,apparmor,bpf"
+#endif
+
+#endif /* CONFIG_LSM */
+
+static __initconst const char * const builtin_lsm_order = LSM_ORDER;
 
 /* Ordered list of LSMs to initialize. */
 static __initdata struct lsm_info **ordered_lsms;
