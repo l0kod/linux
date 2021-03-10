@@ -22,6 +22,7 @@
 #include <linux/slab.h>
 #include <linux/uaccess.h>
 #include <linux/fs.h>
+#include <linux/path.h>
 #include <linux/personality.h>
 #include <linux/pagemap.h>
 #include <linux/syscalls.h>
@@ -546,8 +547,18 @@ retry:
 	if (error)
 		goto dput_and_out;
 
+	/*
+	 * Changing the root directory for the calling task (and its future
+	 * children) requires that this task has CAP_SYS_CHROOT in its
+	 * namespace, or be running with no_new_privs and not sharing its
+	 * fs_struct and not escaping its current root (cf. create_user_ns()).
+	 * As for seccomp, checking no_new_privs avoids scenarios where
+	 * unprivileged tasks can affect the behavior of privileged children.
+	 */
 	error = -EPERM;
-	if (!ns_capable(current_user_ns(), CAP_SYS_CHROOT))
+	if (!ns_capable(current_user_ns(), CAP_SYS_CHROOT) &&
+			!(task_no_new_privs(current) && current->fs->users == 1
+				&& !current_chrooted()))
 		goto dput_and_out;
 	error = security_path_chroot(&path);
 	if (error)
